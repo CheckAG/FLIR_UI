@@ -1,4 +1,4 @@
-Cython
+Cython==0.29.23
 pyflycap2
 streamlit
 streamlit_extras
