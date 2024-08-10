@@ -1,3 +1,4 @@
-streamlit
 pyflycap2
+streamlit
+streamlit_extras
 matplotlib
