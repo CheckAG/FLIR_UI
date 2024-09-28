@@ -1,3 +1,4 @@
 PySide6
 pyqtgraph
 pyflycap2
+numpy

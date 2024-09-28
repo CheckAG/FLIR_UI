@@ -14,8 +14,7 @@ class Serial_popup(QDialog):
         for info in cc.get_gige_cams():
             print(info)
             self.serial_comboBox.addItem(str(info))
-
-
+            
         QBtn = QDialogButtonBox.Ok | QDialogButtonBox.Cancel
 
         self.buttonBox = QDialogButtonBox(QBtn)
