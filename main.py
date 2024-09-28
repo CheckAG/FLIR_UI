@@ -6,13 +6,15 @@
 #  pyuic5 form.ui -o ui_form.py
 import sys
 import traceback
-from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QDialog
+from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QDialog, QFileDialog
 from PySide6.QtCore import QThread, Signal
 import numpy as np
+import pandas as pd
 from src.camera import FlirCamera
 from src.windows.Serial_popup import Serial_popup
 from src.ui_form import Ui_MainWindow
 from src.windows.customwindows import ConfigDialog, ProgressDialog
+from src.windows.save_file_popup import Save_file_popup
 
 class Main(QMainWindow, Ui_MainWindow):
     def __init__(self):
@@ -28,6 +30,7 @@ class Main(QMainWindow, Ui_MainWindow):
         self.actionLiveView.triggered.connect(self.liveview)
         self.action_Capture.triggered.connect(self.capture)
         self.actionConfig.triggered.connect(self.open_config_dialog)
+        self.actionSave.triggered.connect(self.save_spectra_csv)
     
     def connect_serial(self):
         dlg = Serial_popup()
@@ -79,7 +82,7 @@ class Main(QMainWindow, Ui_MainWindow):
                               symbolSize=0.4, symbolPen='b')
     
     def capture(self):
-        img_averaged = None
+        self.img_averaged = None
         # Create and show the progress dialog
         progress_dialog = ProgressDialog(self)
         progress_dialog.reset_progress(self.num_averages)  # Reset the progress bar with the maximum value
@@ -91,17 +94,17 @@ class Main(QMainWindow, Ui_MainWindow):
                 image = self.c.cam.get_current_image()  # last image
                 img_np = np.frombuffer(image['buffer'], dtype=np.uint16).reshape((image['rows'], image['cols']))
                 if i == 0:
-                    img_averaged = img_np.mean(axis=0)
+                    self.img_averaged = img_np.mean(axis=0)
                 else:
-                    img_averaged += img_np.mean(axis=0)
+                    self.img_averaged += img_np.mean(axis=0)
                 progress_dialog.set_progress(i + 1)  # Increment progress
                 # Process events to ensure the dialog remains responsive
                 QApplication.processEvents()
             self.c.cam.stop_capture()
-            if img_averaged is not None:
-                img_averaged = img_averaged/(self.num_averages)
+            if self.img_averaged is not None:
+                self.img_averaged = self.img_averaged/(self.num_averages)
             self.GraphWidget.clear()
-            self.GraphWidget.plot(img_averaged, pen='b', penWidth=0.1, symbol='o',
+            self.GraphWidget.plot(self.img_averaged, pen='b', penWidth=0.1, symbol='o',
                         symbolSize=0.4, symbolPen='b')
             print("capture image success")
         except:
@@ -120,6 +123,21 @@ class Main(QMainWindow, Ui_MainWindow):
     def update_cam_settings(self, IT, GAIN):
         self.c.cam.set_cam_abs_setting_value("shutter", IT)
         self.c.cam.set_cam_abs_setting_value("gain", GAIN)
+
+    def save_spectra_csv(self):
+        def save_csv():
+            x = np.arange(len(self.img_averaged))
+            # y = self.data
+            y = self.img_averaged
+            temp_df = pd.DataFrame(data={"Pixels": x, "Intensity": y})
+            name = QFileDialog.getSaveFileName(self, "Save File")
+            temp_df.to_csv(f"{name[0]}.csv", index=False)
+
+        dlg = Save_file_popup()
+        if dlg.exec():
+            filetype = dlg.get_options()
+            if filetype == 'csv':
+                save_csv()
 
 class CaptureThread(QThread):
     # Custom signal to send data to the main thread
