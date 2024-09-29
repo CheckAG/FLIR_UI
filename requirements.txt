@@ -3,3 +3,4 @@ pyqtgraph
 pyflycap2
 numpy
 pandas
+scipy
